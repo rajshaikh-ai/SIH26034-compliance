@@ -117,13 +117,14 @@ with tab_an:
                                               threshold=threshold, check_font=not use_photo)
             a = res["analysis"]
             icon, color, msg = VERDICT_STYLE[res["verdict"]]
+            msg = res.get("review_reason") or msg
             st.markdown(
                 f"<div style='border-left:8px solid {color};background:{color}22;padding:14px 18px;border-radius:8px'>"
                 f"<div style='font-size:1.9rem;font-weight:700'>{icon} {res['verdict']}</div>"
                 f"<div style='opacity:.85'>{msg}</div></div>", unsafe_allow_html=True)
             st.write("")
             m1, m2, m3, m4 = st.columns(4)
-            short = {"COMPLIANT": "✅ Pass", "NON-COMPLIANT": "❌ Fail"}
+            short = {"COMPLIANT": "✅ Pass", "NON-COMPLIANT": "❌ Fail", "NEEDS REVIEW": "⚠️ Unsure"}
             m1.metric("ML model", short[res["ml_verdict"]], help=f"{res['model']} (best of 5 trained classifiers)")
             m2.metric("P(non-compliant)", f"{res['prob_non_compliant']:.0%}")
             m3.metric("Rule engine", short[res["rule_engine"]["verdict"]])
@@ -141,7 +142,7 @@ with tab_an:
 
             st.subheader("Mandatory declaration checklist")
             ck = pd.DataFrame(res["checklist"])
-            ck.insert(0, "status", ck.pop("found").map({True: "✅", False: "❌"}))
+            ck.insert(0, "status", ck.pop("status").map({"ok": "✅", "missing": "❌", "unreadable": "⚠️ not readable"}))
             st.dataframe(ck, width="stretch", hide_index=True)
             if use_photo:
                 st.caption("Rule 7 numeral-height check is skipped for phone photos (physical scale unknown). "

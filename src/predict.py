@@ -45,10 +45,20 @@ class CompliancePredictor:
 
         # Hybrid decision: ML model and explainable rule engine must agree,
         # otherwise the label is flagged for a human inspector.
-        if ml_nc == rule_nc:
-            final = "NON-COMPLIANT" if ml_nc else "COMPLIANT"
+        unreadable = a["rule"].get("unreadable", [])
+        names = {"net_qty": "net quantity", "mrp": "MRP value", "mfg_date": "manufacturing date"}
+        if ml_nc and rule_nc:
+            final, reason = "NON-COMPLIANT", ""
+        elif not ml_nc and not rule_nc and not unreadable:
+            final, reason = "COMPLIANT", ""
         else:
             final = "NEEDS REVIEW"
+            if unreadable:
+                reason = ("Some printed values could not be read (cut off, curved or blurred): "
+                          + ", ".join(names.get(u, u) for u in unreadable)
+                          + ". Retake the photo with that part of the pack flat, in focus and fully in the frame.")
+            else:
+                reason = "The ML model and the rule engine disagree, so a human inspector should check this pack."
         codes = list(dict.fromkeys(rule_vios + ml_vios))
         source = {v: ("ML + rules" if v in rule_vios and v in ml_vios else "rules" if v in rule_vios else "ML")
                   for v in codes}
@@ -66,20 +76,27 @@ class CompliancePredictor:
         ]
         if a["rule"]["imported"] or F["origin"]["found"]:
             checks.append(("Country of origin (imported goods)", F["origin"]))
-        checklist = [dict(declaration=n, found=bool(f["found"]), evidence=f.get("value", "")[:120],
+        key_of = {id(F[k]): k for k in F}
+        def status(f):
+            if key_of.get(id(f)) in unreadable:
+                return "unreadable"
+            return "ok" if f["found"] else "missing"
+        checklist = [dict(declaration=n, status=status(f), evidence=f.get("value", "")[:120],
                           keyword_similarity=round(f["fuzzy"], 2)) for n, f in checks]
         if nq["found"]:
             q = nq["qty"]
-            checklist.append(dict(declaration="Standard SI unit", found=bool(q["standard"]),
+            checklist.append(dict(declaration="Standard SI unit", status="ok" if q["standard"] else "missing",
                                   evidence=f"{q['value']:g} {q['unit']}", keyword_similarity=None))
             if check_font:
                 checklist.append(dict(declaration="Numeral height (Rule 7)",
-                                      found=bool(nq["numeral_mm"] >= nq["required_mm"] * 0.97),
+                                      status="ok" if nq["numeral_mm"] >= nq["required_mm"] * 0.97 else "missing",
                                       evidence=f"~{nq['numeral_mm']:.1f} mm (required >= {nq['required_mm']:.0f} mm)",
                                       keyword_similarity=None))
 
         return dict(
             verdict=final,
+            review_reason=reason,
+            unreadable=unreadable,
             ml_verdict="NON-COMPLIANT" if ml_nc else "COMPLIANT",
             prob_non_compliant=round(p_nc, 4),
             model=self.bin["name"],
@@ -87,7 +104,7 @@ class CompliancePredictor:
                              detail=C.VIOLATION_INFO[v][2], probability=round(vio_p[v], 3), source=source[v])
                         for v in codes],
             violation_probabilities={k: round(v, 3) for k, v in vio_p.items()},
-            rule_engine=dict(verdict="COMPLIANT" if a["rule"]["compliant"] else "NON-COMPLIANT",
+            rule_engine=dict(verdict="NON-COMPLIANT" if rule_nc else ("NEEDS REVIEW" if unreadable else "COMPLIANT"),
                              violations=a["rule"]["violations"]),
             checklist=checklist,
             ocr_text=a["text"],
@@ -114,9 +131,12 @@ def main() -> None:
     print(f"\nFINAL VERDICT: {res['verdict']}")
     print(f"  ML model ({res['model']}): {res['ml_verdict']}  (P(non-compliant) = {res['prob_non_compliant']:.2f})")
     print(f"  Rule engine: {res['rule_engine']['verdict']}")
+    if res["review_reason"]:
+        print(f"  Note: {res['review_reason']}")
     print("\nMandatory declarations:")
     for c in res["checklist"]:
-        print(f"  [{'OK' if c['found'] else 'XX'}] {c['declaration']:<40} {c['evidence']}")
+        tag = {"ok": "OK", "missing": "XX", "unreadable": "??"}[c["status"]]
+        print(f"  [{tag}] {c['declaration']:<40} {c['evidence']}")
     if res["violations"]:
         print("\nViolations:")
         for v in res["violations"]:

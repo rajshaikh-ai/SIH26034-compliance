@@ -98,20 +98,33 @@ def _segment(box: np.ndarray, text: str, conf: float) -> dict:
                 cy=float(ys.mean()))
 
 
-def group_lines(segs: list[dict]) -> list[dict]:
-    """Merge OCR segments that sit on the same visual line."""
+def group_lines(segs: list[dict], max_gap: float = 2.5) -> list[dict]:
+    """Merge OCR segments that sit on the same visual line.
+
+    A segment joins a line only if it is vertically aligned with the line's
+    *first* segment (the band never grows) and horizontally close to it
+    (gap < max_gap x text height). Text in another column of a multi-panel
+    photo therefore stays a separate line."""
     lines: list[dict] = []
-    for s in sorted(segs, key=lambda s: s["cy"]):
+    for s in sorted(segs, key=lambda s: (s["cy"], s["x0"])):
         placed = False
         for ln in lines:
-            overlap = min(ln["y1"], s["y1"]) - max(ln["y0"], s["y0"])
-            if overlap > 0.5 * min(ln["height"], s["height"]) and abs(ln["height"] - s["height"]) < 0.5 * max(ln["height"], s["height"]):
-                ln["segs"].append(s)
-                ln["y0"], ln["y1"] = min(ln["y0"], s["y0"]), max(ln["y1"], s["y1"])
-                placed = True
-                break
+            ref = ln["segs"][0]
+            overlap = min(ref["y1"], s["y1"]) - max(ref["y0"], s["y0"])
+            if overlap <= 0.5 * min(ref["height"], s["height"]):
+                continue
+            if abs(ref["height"] - s["height"]) >= 0.5 * max(ref["height"], s["height"]):
+                continue
+            gap = max(s["x0"] - ln["x1"], ln["x0"] - s["x1"])
+            if gap > max_gap * max(ref["height"], s["height"]):
+                continue
+            ln["segs"].append(s)
+            ln["x0"], ln["x1"] = min(ln["x0"], s["x0"]), max(ln["x1"], s["x1"])
+            ln["y0"], ln["y1"] = min(ln["y0"], s["y0"]), max(ln["y1"], s["y1"])
+            placed = True
+            break
         if not placed:
-            lines.append(dict(segs=[s], y0=s["y0"], y1=s["y1"], height=s["height"]))
+            lines.append(dict(segs=[s], x0=s["x0"], x1=s["x1"], y0=s["y0"], y1=s["y1"], height=s["height"]))
     out = []
     for ln in lines:
         segs_sorted = sorted(ln["segs"], key=lambda s: s["x0"])
