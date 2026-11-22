@@ -16,11 +16,22 @@ from src import config as C
 st.set_page_config(page_title="Label Compliance Checker - SIH26034", page_icon="📦", layout="wide")
 
 
-@st.cache_resource(show_spinner="Loading OCR engine and models ...")
-def get_predictor():
-    from src.predict import CompliancePredictor
+def code_version() -> str:
+    """Changes whenever the source code or the trained models change, so a
+    redeploy never keeps serving a stale cached predictor."""
+    files = sorted((C.ROOT / "src").glob("*.py")) + [C.COMPLIANCE_MODEL_PATH, C.VIOLATION_MODEL_PATH]
+    return "|".join(f"{p.name}:{p.stat().st_mtime_ns}:{p.stat().st_size}" for p in files if p.exists())
 
-    return CompliancePredictor()
+
+@st.cache_resource(show_spinner="Loading OCR engine and models ...", max_entries=1)
+def get_predictor(version: str):
+    import importlib
+
+    from src import config, features, ocr, predict, preprocess, rules
+
+    for mod in (config, ocr, preprocess, rules, features, predict):  # pick up new code after a redeploy
+        importlib.reload(mod)
+    return predict.CompliancePredictor()
 
 
 def models_ready() -> bool:
@@ -113,7 +124,7 @@ with tab_an:
                 if "panel_width_mm" in lab:
                     pmm = float(lab.loc[sample.image_id, "panel_width_mm"])
             with st.spinner("Preprocessing → OCR → feature extraction → classification ..."):
-                res = get_predictor().predict(images if len(images) > 1 else images[0], panel_width_mm=pmm,
+                res = get_predictor(code_version()).predict(images if len(images) > 1 else images[0], panel_width_mm=pmm,
                                               threshold=threshold, check_font=not use_photo)
             a = res["analysis"]
             icon, color, msg = VERDICT_STYLE[res["verdict"]]
@@ -142,7 +153,8 @@ with tab_an:
 
             st.subheader("Mandatory declaration checklist")
             ck = pd.DataFrame(res["checklist"])
-            ck.insert(0, "status", ck.pop("status").map({"ok": "✅", "missing": "❌", "unreadable": "⚠️ not readable"}))
+            stat = ck.pop("status") if "status" in ck else ck.pop("found").map({True: "ok", False: "missing"})
+            ck.insert(0, "status", stat.map({"ok": "✅", "missing": "❌", "unreadable": "⚠️ not readable"}))
             st.dataframe(ck, width="stretch", hide_index=True)
             if use_photo:
                 st.caption("Rule 7 numeral-height check is skipped for phone photos (physical scale unknown). "
