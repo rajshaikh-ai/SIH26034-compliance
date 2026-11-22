@@ -24,7 +24,7 @@ violations** are present.
 | Dataset with compliant & non-compliant labels | `src/generate_dataset.py` – 1 400 annotated label images (incl. table layouts and photo-style backgrounds) (any real dataset in the same CSV format also works) |
 | Preprocessing | `src/preprocess.py` – resize, projection-profile deskew, bilateral denoise, CLAHE, adaptive threshold |
 | OCR | `src/ocr.py` – RapidOCR (PaddleOCR PP-OCR models on ONNX Runtime), Tesseract fallback |
-| Feature extraction | `src/rules.py`, `src/features.py` – 45 engineered features + char n-gram TF-IDF/LSA of the OCR text |
+| Feature extraction | `src/rules.py`, `src/features.py` – 56 engineered features (41 used by the models; photo-quality features are display-only) |
 | Classification models | `src/train.py` – Logistic Regression, SVM, Random Forest, Gradient Boosting, MLP vs. rule-based baseline; multi-label violation model |
 | Evaluation | accuracy, precision, recall, F1, ROC-AUC, 5-fold CV, confusion matrices, per-violation F1, Hamming loss |
 | Visualising common violations | `src/visualize.py` – 13 figures in `reports/figures/` + interactive Streamlit dashboard (`app.py`) |
@@ -39,12 +39,12 @@ label image ──► preprocessing ──► OCR (text + boxes) ──► line 
                                      • 8 mandatory declarations found?
                                      • SI unit?   • numeral height ≥ Rule 7 minimum?
                                                            │
-                         45 numeric features + TF-IDF(char 2-4 grams) → SVD(60)
+                         41 label-content features (rule flags, keyword similarity, quantities)
                                                            │
                     ┌──────────────────────────────────────┴───────────────┐
             Binary classifier                                  Multi-label classifier
       compliant vs non-compliant                         which of the 10 violations
-   (best of 5 models, chosen by CV-F1)                    (Random Forest, multi-output)
+   (5 models compared; simplest within 0.01 CV-F1)       (Logistic Regression / Gradient Boosting)
 ```
 
 ### Mandatory declarations checked (10 violation classes)
@@ -93,21 +93,32 @@ physical label width in the app sidebar (or `--panel-mm` on the CLI).
 
 | Model | Accuracy | Precision | Recall | F1 | ROC-AUC | 5-fold CV F1 |
 |---|---|---|---|---|---|---|
-| Logistic Regression | 0.986 | 0.990 | 0.984 | 0.987 | 0.998 | 0.977 ± 0.004 |
-| **SVM (RBF)** (selected) | 0.980 | 0.979 | 0.984 | 0.982 | 0.999 | 0.981 ± 0.006 |
-| Random Forest | 0.983 | 0.979 | 0.990 | 0.984 | 0.997 | 0.973 ± 0.006 |
-| Gradient Boosting | 0.986 | 0.979 | 0.995 | 0.987 | 0.999 | 0.975 ± 0.006 |
-| MLP Neural Net | 0.983 | 0.984 | 0.984 | 0.984 | 0.999 | 0.953 ± 0.019 |
+| **Logistic Regression** (selected) | 0.983 | 0.979 | 0.990 | 0.984 | 0.999 | 0.972 ± 0.004 |
+| SVM (RBF) | 0.977 | 0.974 | 0.984 | 0.979 | 0.999 | 0.970 ± 0.008 |
+| Random Forest | 0.974 | 0.969 | 0.984 | 0.977 | 0.999 | 0.973 ± 0.005 |
+| Gradient Boosting | 0.986 | 0.984 | 0.990 | 0.987 | 0.999 | 0.973 ± 0.007 |
+| MLP Neural Net | 0.983 | 0.974 | 0.995 | 0.985 | 0.999 | 0.961 ± 0.015 |
 | Rule-based baseline | 0.940 | 0.909 | 0.990 | 0.947 | — | — |
 
 Held-out test set = 350 labels (train 1050); positive class = non-compliant.
-Model selection uses 5-fold cross-validated F1 on the training set only.
+Model selection uses 5-fold cross-validated F1 on the training set only. All five models score within about 0.01 of
+each other, so the **simplest model within 0.01 of the best CV-F1** is deployed. On real phone photos (different
+lighting, layouts and products from the synthetic training labels) the simpler model extrapolates far more
+sensibly. Tested on real packs: a medicine box (all declarations present) was correctly COMPLIANT with Logistic
+Regression (P = 0.05), while Gradient Boosting said 0.89 non-compliant.
+
+Two design decisions came from testing on real photos:
+* **No raw OCR-text (TF-IDF) features.** They learned the synthetic labels' vocabulary (brand and product names)
+  and made every model over-confident on real products. Test F1 without them is unchanged.
+* **Photo-quality features (blur, brightness, skew, OCR confidence) are display-only.** Image quality is
+  independent of compliance in the training data, so they carry no signal, but real photos fall far outside
+  their training range.
 
 **Which violations (multi-label):**
 
 | | Micro-F1 | Macro-F1 | Hamming loss | Exact-match |
 |---|---|---|---|---|
-| ML (Gradient Boosting, stacked with rule features) | 0.970 | 0.967 | 0.005 | 95.4% |
+| ML (Logistic Regression, stacked with rule features) | 0.947 | 0.948 | 0.009 | 91.4% |
 | Rule engine alone | 0.915 | 0.929 | 0.015 | 86.6% |
 
 **Common violations** (dataset): MRP tax clause missing and missing consumer-care details are the most frequent

@@ -29,6 +29,18 @@ NUMERIC_FEATURES = (
 )
 TEXT_FEATURE = "ocr_text"
 
+# Photo-quality / OCR-statistics features. In the training data image quality is
+# independent of compliance by design, so these carry no real signal - but on real
+# phone photos (darker, tilted, lower OCR confidence) they lie far outside the
+# training range and make classifiers extrapolate. They are still computed and
+# shown in the app, just not fed to the models.
+NUISANCE_FEATURES = {
+    "ocr_n_lines", "ocr_n_chars", "ocr_mean_conf", "ocr_min_conf", "ocr_digit_ratio", "ocr_upper_ratio",
+    "ocr_text_area", "ocr_median_height_mm", "img_sharpness", "img_contrast", "img_brightness",
+    "img_edge_density", "img_noise", "img_aspect", "skew_angle_abs",
+}
+MODEL_FEATURES = [f for f in NUMERIC_FEATURES if f not in NUISANCE_FEATURES]
+
 
 def build_features(lines: list[dict], rule: dict, quality: dict, img_shape, px_per_mm: float, skew: float) -> dict:
     F = rule["fields"]

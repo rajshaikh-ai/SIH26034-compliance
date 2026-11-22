@@ -23,7 +23,9 @@ NONSTANDARD_UNITS = {"gm": 1, "gms": 1, "kgs": 1000, "oz": 28.35, "lb": 453.6, "
 NETQTY_KW = re.compile(r"\bnet\s*\.?\s*(wt|weight|qty|quantity|vol|volume|content|contents|mass)\b", re.I)
 MRP_KW = re.compile(r"\b(m\s*\.?\s*r\s*\.?\s*p|max(imum)?\.?\s*retail\s*price)\b", re.I)
 PRICE_RE = re.compile(r"(rs\.?|₹|inr|r5|z)\s*[:.]?\s*(\d+(?:[.,]\d{1,2})?)", re.I)
-TAX_RE = re.compile(r"incl\w*\.?\s*(of\s*)?all\s*tax", re.I)
+# "Incl. of all taxes" - OCR often garbles "Incl." ("Ind.", "lncl", "Inc1"), so any
+# word starting with "in" before "(of) all tax" counts; "excl..." never does.
+TAX_RE = re.compile(r"(?<![a-z])[il1|]n[a-z0-9]{0,8}\.?\s*(of\s*)?all\s*tax", re.I)
 MFG_KW = re.compile(r"\b(mfg|mfd|manufactur\w*|pkd|packed|packing|date\s*of\s*(mfg|manufacture|packing))\b", re.I)
 MONTH_RE = r"(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s*[-/']?\s*\d{2,4}"
 DATE_RE = re.compile(r"(\b\d{1,2}\s*[/.\-]\s*\d{1,2}\s*[/.\-]\s*\d{2,4}\b|\b\d{1,2}\s*[/.\-]\s*\d{4}\b"

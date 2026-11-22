@@ -46,6 +46,11 @@ class CompliancePredictor:
         # Hybrid decision: ML model and explainable rule engine must agree,
         # otherwise the label is flagged for a human inspector.
         unreadable = a["rule"].get("unreadable", [])
+        # An unreadable value can't be judged either way: drop ML guesses about it.
+        unjudgeable = {"net_qty": {"MISSING_NET_QUANTITY", "NON_STANDARD_UNIT", "NET_QTY_FONT_TOO_SMALL"},
+                       "mrp": {"MISSING_MRP"}, "mfg_date": {"MISSING_MFG_DATE"}}
+        skip = set().union(*(unjudgeable.get(u, set()) for u in unreadable)) if unreadable else set()
+        ml_vios = [v for v in ml_vios if v not in skip]
         names = {"net_qty": "net quantity", "mrp": "MRP value", "mfg_date": "manufacturing date"}
         if ml_nc and rule_nc:
             final, reason = "NON-COMPLIANT", ""

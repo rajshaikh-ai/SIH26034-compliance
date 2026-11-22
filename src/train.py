@@ -37,19 +37,20 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
 from src import config as C
-from src.features import NUMERIC_FEATURES, TEXT_FEATURE
+from src.features import MODEL_FEATURES, NUMERIC_FEATURES, TEXT_FEATURE
 
 
 def make_preprocessor() -> ColumnTransformer:
-    text_pipe = Pipeline([
-        ("tfidf", TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 4), min_df=3, max_features=6000,
-                                  sublinear_tf=True, lowercase=True)),
-        ("svd", TruncatedSVD(n_components=60, random_state=C.RANDOM_SEED)),
-    ])
-    return ColumnTransformer([
-        ("num", StandardScaler(), NUMERIC_FEATURES),
-        ("txt", text_pipe, TEXT_FEATURE),
-    ])
+    """Scaled engineered features only. (A char n-gram TF-IDF block of the raw
+    OCR text was tried: it learns the synthetic labels' vocabulary - brand and
+    product names - and made models over-confident on real product photos.)"""
+    return ColumnTransformer([("num", StandardScaler(), MODEL_FEATURES)])
+
+
+# Simplest first: used to break near-ties in model selection, because simpler
+# models extrapolate more gracefully to real photos than the training data.
+SIMPLICITY_ORDER = ["Logistic Regression", "SVM (RBF)", "Random Forest", "Gradient Boosting", "MLP Neural Net"]
+SELECTION_TOLERANCE = 0.01
 
 
 def candidate_models() -> dict:
@@ -121,21 +122,35 @@ def main() -> None:
     test_outputs["Rule-based baseline"] = dict(pred=rule_pred.tolist(), proba=None)
     print(f"  {'Rule-based baseline':<20} F1={results['Rule-based baseline']['f1']:.3f}")
 
-    best = max((n for n in fitted), key=lambda n: (results[n]["cv_f1_mean"], results[n]["f1"]))
-    print(f"Best model (by 5-fold CV F1): {best}")
+    top = max(results[n]["cv_f1_mean"] for n in fitted)
+    best = next(n for n in SIMPLICITY_ORDER if n in fitted and results[n]["cv_f1_mean"] >= top - SELECTION_TOLERANCE)
+    print(f"Selected model: {best} (simplest within {SELECTION_TOLERANCE} of the best 5-fold CV F1 {top:.3f})")
     best_pred = np.array(test_outputs[best]["pred"])
     report_txt = classification_report(yte, best_pred, target_names=["Compliant", "Non-compliant"], digits=4)
 
     # ------------------------------------------------------------ Task B
-    vio_pipe = Pipeline([
-        ("prep", make_preprocessor()),
-        ("clf", MultiOutputClassifier(HistGradientBoostingClassifier(
-            max_iter=200, learning_rate=0.08, class_weight="balanced", random_state=C.RANDOM_SEED), n_jobs=-1)),
-    ])
-    vio_pipe.fit(Xtr, Y[idx_tr])
-    Yp = vio_pipe.predict(Xte)
     Y_rule = violation_matrix(df["rule_violations"].iloc[idx_te])
     Yte = Y[idx_te]
+    vio_candidates = {
+        "Logistic Regression": LogisticRegression(max_iter=3000, class_weight="balanced"),
+        "Gradient Boosting": HistGradientBoostingClassifier(max_iter=200, learning_rate=0.08, class_weight="balanced",
+                                                            random_state=C.RANDOM_SEED),
+    }
+    vio_scores, vio_fitted = {}, {}
+    for name, est in vio_candidates.items():
+        pipe = Pipeline([("prep", make_preprocessor()), ("clf", MultiOutputClassifier(est, n_jobs=-1))])
+        # select on a validation split of the TRAINING data, never on the test set
+        a, b = train_test_split(np.arange(len(idx_tr)), test_size=0.2, random_state=C.RANDOM_SEED)
+        pipe.fit(Xtr.iloc[a], Y[idx_tr][a])
+        vio_scores[name] = f1_score(Y[idx_tr][b], pipe.predict(Xtr.iloc[b]), average="micro")
+        vio_fitted[name] = pipe
+    vtop = max(vio_scores.values())
+    vio_name = next(n for n in vio_candidates if vio_scores[n] >= vtop - SELECTION_TOLERANCE)
+    print("Violation model validation micro-F1:", {k: round(v, 3) for k, v in vio_scores.items()}, "->", vio_name)
+    vio_pipe = Pipeline([("prep", make_preprocessor()),
+                         ("clf", MultiOutputClassifier(vio_candidates[vio_name], n_jobs=-1))])
+    vio_pipe.fit(Xtr, Y[idx_tr])
+    Yp = vio_pipe.predict(Xte)
 
     def per_violation(Ypred):
         p, r, f, s = precision_recall_fscore_support(Yte, Ypred, zero_division=0)
@@ -152,6 +167,7 @@ def main() -> None:
                       hamming_loss=round(hamming_loss(Yte, Y_rule), 4),
                       exact_match=round(float((Y_rule == Yte).all(axis=1).mean()), 4)),
     }
+    vio_results["ml"]["model"] = vio_name
     print(f"Violation model micro-F1={vio_results['ml']['micro_f1']:.3f} "
           f"(rules {vio_results['rules']['micro_f1']:.3f})")
 
@@ -180,8 +196,8 @@ def main() -> None:
 
     # Permutation-free importance: RF impurity importances on the numeric block
     rf = fitted["Random Forest"]
-    imp = rf.named_steps["clf"].feature_importances_[: len(NUMERIC_FEATURES)]
-    pd.Series(imp, index=NUMERIC_FEATURES).sort_values(ascending=False).to_csv(C.REPORTS_DIR / "feature_importance.csv")
+    imp = rf.named_steps["clf"].feature_importances_[: len(MODEL_FEATURES)]
+    pd.Series(imp, index=MODEL_FEATURES).sort_values(ascending=False).to_csv(C.REPORTS_DIR / "feature_importance.csv")
 
     from src import visualize
     visualize.make_all()

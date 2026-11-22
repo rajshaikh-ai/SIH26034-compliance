@@ -228,7 +228,7 @@ def violation_detection(metrics: dict) -> None:
     names = [C.VIOLATION_SHORT[v] for v in C.VIOLATIONS]
     y = np.arange(len(names))
     fig, ax = plt.subplots(figsize=(9, 6))
-    ax.barh(y + 0.2, [ml[v]["f1"] for v in C.VIOLATIONS], 0.38, color=SERIES[0], label="ML (Gradient Boosting + rule features)")
+    ax.barh(y + 0.2, [ml[v]["f1"] for v in C.VIOLATIONS], 0.38, color=SERIES[0], label=f"ML ({metrics['violations']['ml'].get('model', 'stacked')} + rule features)")
     ax.barh(y - 0.2, [rules[v]["f1"] for v in C.VIOLATIONS], 0.38, color=SERIES[1], label="Rule engine")
     ax.set_yticks(y, [f"{n} (n={ml[v]['support']})" for n, v in zip(names, C.VIOLATIONS)])
     ax.set_xlim(0, 1.05)
