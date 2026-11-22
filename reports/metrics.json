@@ -1,6 +1,6 @@
 {
   "meta": {
-    "trained_at": "2026-11-22T16:05:42",
+    "trained_at": "2026-11-22T23:52:09",
     "n_train": 1050,
     "n_test": 350,
     "numeric_features": [
@@ -64,63 +64,63 @@
     "text_feature": "ocr_text",
     "positive_class": "non_compliant"
   },
-  "best_model": "Random Forest",
+  "best_model": "SVM (RBF)",
   "binary": {
     "Logistic Regression": {
-      "accuracy": 0.9771,
-      "precision": 0.9645,
-      "recall": 0.9948,
-      "f1": 0.9794,
-      "roc_auc": 0.9955,
-      "cv_f1_mean": 0.9751,
-      "cv_f1_std": 0.0112,
-      "train_seconds": 5.7
+      "accuracy": 0.9857,
+      "precision": 0.9895,
+      "recall": 0.9843,
+      "f1": 0.9869,
+      "roc_auc": 0.9977,
+      "cv_f1_mean": 0.9774,
+      "cv_f1_std": 0.0043,
+      "train_seconds": 11.1
     },
     "SVM (RBF)": {
-      "accuracy": 0.9771,
-      "precision": 0.9645,
-      "recall": 0.9948,
-      "f1": 0.9794,
-      "roc_auc": 0.9993,
-      "cv_f1_mean": 0.9741,
-      "cv_f1_std": 0.0045,
-      "train_seconds": 5.9
+      "accuracy": 0.98,
+      "precision": 0.9792,
+      "recall": 0.9843,
+      "f1": 0.9817,
+      "roc_auc": 0.9989,
+      "cv_f1_mean": 0.9809,
+      "cv_f1_std": 0.0059,
+      "train_seconds": 11.9
     },
     "Random Forest": {
-      "accuracy": 0.9743,
-      "precision": 0.955,
-      "recall": 1.0,
-      "f1": 0.977,
-      "roc_auc": 0.9988,
-      "cv_f1_mean": 0.978,
-      "cv_f1_std": 0.0106,
-      "train_seconds": 11.7
+      "accuracy": 0.9829,
+      "precision": 0.9793,
+      "recall": 0.9895,
+      "f1": 0.9844,
+      "roc_auc": 0.9973,
+      "cv_f1_mean": 0.9734,
+      "cv_f1_std": 0.0065,
+      "train_seconds": 21.5
     },
     "Gradient Boosting": {
-      "accuracy": 0.98,
-      "precision": 0.9646,
-      "recall": 1.0,
-      "f1": 0.982,
-      "roc_auc": 0.9999,
-      "cv_f1_mean": 0.9778,
-      "cv_f1_std": 0.0089,
-      "train_seconds": 42.1
+      "accuracy": 0.9857,
+      "precision": 0.9794,
+      "recall": 0.9948,
+      "f1": 0.987,
+      "roc_auc": 0.9993,
+      "cv_f1_mean": 0.9751,
+      "cv_f1_std": 0.006,
+      "train_seconds": 49.8
     },
     "MLP Neural Net": {
-      "accuracy": 0.9857,
-      "precision": 0.9745,
-      "recall": 1.0,
-      "f1": 0.9871,
-      "roc_auc": 0.9984,
-      "cv_f1_mean": 0.9698,
-      "cv_f1_std": 0.0094,
-      "train_seconds": 6.1
+      "accuracy": 0.9829,
+      "precision": 0.9843,
+      "recall": 0.9843,
+      "f1": 0.9843,
+      "roc_auc": 0.9987,
+      "cv_f1_mean": 0.9534,
+      "cv_f1_std": 0.019,
+      "train_seconds": 6.4
     },
     "Rule-based baseline": {
-      "accuracy": 0.9714,
-      "precision": 0.9502,
-      "recall": 1.0,
-      "f1": 0.9745,
+      "accuracy": 0.94,
+      "precision": 0.9087,
+      "recall": 0.9895,
+      "f1": 0.9474,
       "roc_auc": NaN
     }
   },
@@ -128,9 +128,9 @@
     "ml": {
       "per_violation": {
         "MISSING_MANUFACTURER": {
-          "precision": 0.8421,
+          "precision": 0.9412,
           "recall": 0.9412,
-          "f1": 0.8889,
+          "f1": 0.9412,
           "support": 17
         },
         "MISSING_NET_QUANTITY": {
@@ -140,9 +140,9 @@
           "support": 10
         },
         "NON_STANDARD_UNIT": {
-          "precision": 1.0,
-          "recall": 0.973,
-          "f1": 0.9863,
+          "precision": 0.9722,
+          "recall": 0.9459,
+          "f1": 0.9589,
           "support": 37
         },
         "NET_QTY_FONT_TOO_SMALL": {
@@ -159,14 +159,14 @@
         },
         "MRP_TAX_CLAUSE_MISSING": {
           "precision": 1.0,
-          "recall": 0.9756,
-          "f1": 0.9877,
+          "recall": 1.0,
+          "f1": 1.0,
           "support": 41
         },
         "MISSING_MFG_DATE": {
-          "precision": 0.9259,
-          "recall": 1.0,
-          "f1": 0.9615,
+          "precision": 0.8846,
+          "recall": 0.92,
+          "f1": 0.902,
           "support": 25
         },
         "MISSING_BEST_BEFORE": {
@@ -183,15 +183,15 @@
         },
         "MISSING_COUNTRY_OF_ORIGIN": {
           "precision": 1.0,
-          "recall": 0.9412,
-          "f1": 0.9697,
+          "recall": 0.9118,
+          "f1": 0.9538,
           "support": 34
         }
       },
-      "micro_f1": 0.9751,
-      "macro_f1": 0.9712,
-      "hamming_loss": 0.004,
-      "exact_match": 0.9629
+      "micro_f1": 0.9696,
+      "macro_f1": 0.9674,
+      "hamming_loss": 0.0049,
+      "exact_match": 0.9543
     },
     "rules": {
       "per_violation": {
@@ -202,9 +202,9 @@
           "support": 17
         },
         "MISSING_NET_QUANTITY": {
-          "precision": 0.7143,
+          "precision": 1.0,
           "recall": 1.0,
-          "f1": 0.8333,
+          "f1": 1.0,
           "support": 10
         },
         "NON_STANDARD_UNIT": {
@@ -214,9 +214,9 @@
           "support": 37
         },
         "NET_QTY_FONT_TOO_SMALL": {
-          "precision": 0.8889,
+          "precision": 0.9302,
           "recall": 1.0,
-          "f1": 0.9412,
+          "f1": 0.9639,
           "support": 40
         },
         "MISSING_MRP": {
@@ -232,9 +232,9 @@
           "support": 41
         },
         "MISSING_MFG_DATE": {
-          "precision": 0.7812,
+          "precision": 0.4545,
           "recall": 1.0,
-          "f1": 0.8772,
+          "f1": 0.625,
           "support": 25
         },
         "MISSING_BEST_BEFORE": {
@@ -256,21 +256,21 @@
           "support": 34
         }
       },
-      "micro_f1": 0.9414,
-      "macro_f1": 0.9348,
-      "hamming_loss": 0.0097,
-      "exact_match": 0.92
+      "micro_f1": 0.9146,
+      "macro_f1": 0.9286,
+      "hamming_loss": 0.0146,
+      "exact_match": 0.8657
     }
   },
   "confusion_matrix": [
     [
-      150,
-      9
+      155,
+      4
     ],
     [
-      0,
-      191
+      3,
+      188
     ]
   ],
-  "classification_report": "               precision    recall  f1-score   support\n\n    Compliant     1.0000    0.9434    0.9709       159\nNon-compliant     0.9550    1.0000    0.9770       191\n\n     accuracy                         0.9743       350\n    macro avg     0.9775    0.9717    0.9739       350\n weighted avg     0.9754    0.9743    0.9742       350\n"
+  "classification_report": "               precision    recall  f1-score   support\n\n    Compliant     0.9810    0.9748    0.9779       159\nNon-compliant     0.9792    0.9843    0.9817       191\n\n     accuracy                         0.9800       350\n    macro avg     0.9801    0.9796    0.9798       350\n weighted avg     0.9800    0.9800    0.9800       350\n"
 }

@@ -93,12 +93,12 @@ physical label width in the app sidebar (or `--panel-mm` on the CLI).
 
 | Model | Accuracy | Precision | Recall | F1 | ROC-AUC | 5-fold CV F1 |
 |---|---|---|---|---|---|---|
-| Logistic Regression | 0.977 | 0.965 | 0.995 | 0.979 | 0.996 | 0.975 ± 0.011 |
-| SVM (RBF) | 0.977 | 0.965 | 0.995 | 0.979 | 0.999 | 0.974 ± 0.004 |
-| **Random Forest** (selected) | 0.974 | 0.955 | 1.000 | 0.977 | 0.999 | 0.978 ± 0.011 |
-| Gradient Boosting | 0.980 | 0.965 | 1.000 | 0.982 | 1.000 | 0.978 ± 0.009 |
-| MLP Neural Net | 0.986 | 0.975 | 1.000 | 0.987 | 0.998 | 0.970 ± 0.009 |
-| Rule-based baseline | 0.971 | 0.950 | 1.000 | 0.975 | — | — |
+| Logistic Regression | 0.986 | 0.990 | 0.984 | 0.987 | 0.998 | 0.977 ± 0.004 |
+| **SVM (RBF)** (selected) | 0.980 | 0.979 | 0.984 | 0.982 | 0.999 | 0.981 ± 0.006 |
+| Random Forest | 0.983 | 0.979 | 0.990 | 0.984 | 0.997 | 0.973 ± 0.006 |
+| Gradient Boosting | 0.986 | 0.979 | 0.995 | 0.987 | 0.999 | 0.975 ± 0.006 |
+| MLP Neural Net | 0.983 | 0.984 | 0.984 | 0.984 | 0.999 | 0.953 ± 0.019 |
+| Rule-based baseline | 0.940 | 0.909 | 0.990 | 0.947 | — | — |
 
 Held-out test set = 350 labels (train 1050); positive class = non-compliant.
 Model selection uses 5-fold cross-validated F1 on the training set only.
@@ -107,8 +107,8 @@ Model selection uses 5-fold cross-validated F1 on the training set only.
 
 | | Micro-F1 | Macro-F1 | Hamming loss | Exact-match |
 |---|---|---|---|---|
-| ML (Gradient Boosting, stacked with rule features) | 0.975 | 0.971 | 0.004 | 96.3% |
-| Rule engine alone | 0.941 | 0.935 | 0.010 | 92.0% |
+| ML (Gradient Boosting, stacked with rule features) | 0.970 | 0.967 | 0.005 | 95.4% |
+| Rule engine alone | 0.915 | 0.929 | 0.015 | 86.6% |
 
 **Common violations** (dataset): MRP tax clause missing and missing consumer-care details are the most frequent
 (about 22 % of non-compliant labels each), followed by non-standard units (19 %) and too-small net-quantity numerals (17 %).
@@ -149,7 +149,8 @@ website can't do that. Streamlit turns `app.py` into a web app that works in any
 3. Tips: hold the pack flat, fill the frame, avoid glare/folds, one panel per photo.
 4. The result is a combined verdict:
    * ✅ **COMPLIANT** / ❌ **NON-COMPLIANT**: the ML model and the rule engine agree
-   * ⚠️ **NEEDS REVIEW**: they disagree, so a human should look at it (honest behaviour for unfamiliar packs)
+   * ⚠️ **NEEDS REVIEW**: they disagree, or a printed value (net qty / MRP / date) is cut off or blurred.
+     The app then says which value it couldn't read, so you can retake that photo.
 
 Put the demo photos in `samples/` and the app shows a **Try the demo pack** button.
 
@@ -202,3 +203,5 @@ SIH26034_Compliance/
 * Only the English text of the principal display panel is analysed; Hindi/regional declarations are not parsed.
 * Font-height check needs the physical panel width; a reference object or barcode could provide scale automatically.
 * A CNN/vision-language model could replace the OCR + feature stage for layout-level checks.
+
+**Live demo:** https://sih26034-compliance.streamlit.app/
