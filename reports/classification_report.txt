@@ -1,0 +1,10 @@
+Best model: Random Forest
+
+               precision    recall  f1-score   support
+
+    Compliant     1.0000    0.9434    0.9709       159
+Non-compliant     0.9550    1.0000    0.9770       191
+
+     accuracy                         0.9743       350
+    macro avg     0.9775    0.9717    0.9739       350
+ weighted avg     0.9754    0.9743    0.9742       350
